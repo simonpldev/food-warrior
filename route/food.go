@@ -12,8 +12,14 @@ func food(e *echo.Echo) {
 	// List
 	group.GET("", ctl.FoodList)
 
+	// Detail
+	group.GET("/:id", ctl.FoodDetail)
+
 	// Create
 	group.POST("", ctl.FoodCreate)
+
+	// Update
+	group.PUT("/:id", ctl.FoodUpdate)
 
 	// Delete All
 	group.DELETE("", ctl.FoodDelete)

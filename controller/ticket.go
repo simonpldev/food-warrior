@@ -5,20 +5,26 @@ import (
 	"food-warrior/model"
 	"food-warrior/util"
 	"strconv"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 )
 
-func FoodList(c echo.Context) error {
+func TicketList(c echo.Context) error {
 
-	rs := db.GetFoodList()
+	var rs []model.Ticket
+
+	tickets := db.GetTicketList()
+
+	for _, t := range tickets {
+		t.Reservations = db.GetReservationListByTicketID(t.ID)
+		rs = append(rs, t)
+	}
 
 	//Return 200
 	return util.Response200(c, "", rs)
 }
 
-func FoodDetail(c echo.Context) error {
+func TicketDetail(c echo.Context) error {
 	var idStr = c.Param("id")
 
 	id, err := strconv.Atoi(idStr)
@@ -26,16 +32,17 @@ func FoodDetail(c echo.Context) error {
 		return util.Response404(c, err.Error())
 	}
 
-	rs := db.GetFoodByID(id)
+	rs := db.GetTicketByID(id)
+	rs.Reservations = db.GetReservationListByTicketID(id)
 
 	//Return 200
 	return util.Response200(c, "", rs)
 }
 
-func FoodUpdate(c echo.Context) error {
+func TicketUpdate(c echo.Context) error {
 	var (
 		idStr   = c.Param("id")
-		payload model.FoodUpdatePayload
+		payload model.TicketPayload
 	)
 
 	//Bind and parse to struct
@@ -48,15 +55,20 @@ func FoodUpdate(c echo.Context) error {
 		return util.Response404(c, err.Error())
 	}
 
-	db.UpdateFoodByID(id, payload)
+	db.UpdateTicketByID(id, payload)
+
+	db.DeleteReservationByTicketID(id)
+	for _, r := range payload.Reservations {
+		db.AddReservation(r)
+	}
 
 	//Return 200
 	return util.Response200(c, "", nil)
 }
 
-func FoodCreate(c echo.Context) error {
+func TicketCreate(c echo.Context) error {
 	var (
-		payload model.FoodCreatePayload
+		payload model.TicketPayload
 	)
 
 	//Bind and parse to struct
@@ -64,21 +76,17 @@ func FoodCreate(c echo.Context) error {
 		return util.Response400(c, err.Error())
 	}
 
-	foodNames := strings.Split(payload.FoodString, ",")
+	db.AddTicket(payload)
 
-	if len(foodNames) == 0 {
-		return util.Response400(c, "No food in payload")
-	}
-
-	for _, foodName := range foodNames {
-		db.AddFood(strings.TrimSpace(foodName))
+	for _, r := range payload.Reservations {
+		db.AddReservation(r)
 	}
 
 	//Return 200
 	return util.Response200(c, "", nil)
 }
 
-func FoodDeleteByID(c echo.Context) error {
+func TicketDeleteByID(c echo.Context) error {
 	var idStr = c.Param("id")
 
 	id, err := strconv.Atoi(idStr)
@@ -86,19 +94,19 @@ func FoodDeleteByID(c echo.Context) error {
 		return util.Response404(c, err.Error())
 	}
 
-	//Delete food and related reservation
-	db.DeleteReservationByFoodID(id)
-	db.DeleteFoodByID(id)
+	//Delete Ticket list
+	db.DeleteReservationByTicketID(id)
+	db.DeleteTicketByID(id)
 
 	//Return 200
 	return util.Response200(c, "", nil)
 }
 
-func FoodDelete(c echo.Context) error {
+func TicketDelete(c echo.Context) error {
 
-	//Delete food and reservation list
+	//Delete Ticket list
 	db.DeleteAllReservation()
-	db.DeleteAllFood()
+	db.DeleteAllTicket()
 
 	//Return 200
 	return util.Response200(c, "", nil)

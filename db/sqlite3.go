@@ -22,11 +22,21 @@ func Connect() {
 	stmt.Exec()
 
 	stmt, _ = DB.Prepare(`
+		CREATE TABLE IF NOT EXISTS "TICKETS" (
+			"ID" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+			"USERNAME" TEXT NOT NULL
+		);
+	`)
+
+	stmt.Exec()
+
+	stmt, _ = DB.Prepare(`
 		CREATE TABLE IF NOT EXISTS "RESERVATIONS" (
 			"ID" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-			"USERNAME" TEXT NOT NULL,
-			"RESERVED_FOOD_ID" INTEGER NOT NULL,
-			FOREIGN KEY(RESERVED_FOOD_ID) REFERENCES FOODS(ID)
+			"TICKET_ID" INTEGER NOT NULL,
+			"FOOD_ID" INTEGER NOT NULL,
+			FOREIGN KEY(TICKET_ID) REFERENCES TICKETS(ID),
+			FOREIGN KEY(FOOD_ID) REFERENCES FOODS(ID)
 		);
 	`)
 
@@ -38,29 +48,39 @@ func GetDB() *sql.DB {
 	return DB
 }
 
-func AddFoodByName(name string) {
+func AddFood(foodName string) {
 	stmt, _ := DB.Prepare(`
 		INSERT INTO FOODS(NAME) values (?)
 	`)
 
 	defer stmt.Close()
 
-	stmt.Exec(name)
+	stmt.Exec(foodName)
 }
 
-func AddReservation(r model.ReservationPayload) {
+func AddTicket(t model.TicketPayload) {
 	stmt, _ := DB.Prepare(`
-		INSERT INTO RESERVATIONS(USERNAME, RESERVED_FOOD_ID) values (?, ?)
+		INSERT INTO TICKETS(USERNAME) values (?)
 	`)
 
 	defer stmt.Close()
 
-	stmt.Exec(r.Username, r.ReservedFoodID)
+	stmt.Exec(t.Username)
 }
 
-func DeleteReservationByID(id int) {
+func AddReservation(r model.ReservationPayload) {
 	stmt, _ := DB.Prepare(`
-		DELETE FROM RESERVATIONS WHERE ID = ?
+		INSERT INTO RESERVATIONS(TICKET_ID, FOOD_ID) values (?, ?)
+	`)
+
+	defer stmt.Close()
+
+	stmt.Exec(r.TicketID, r.FoodID)
+}
+
+func DeleteTicketByID(id int) {
+	stmt, _ := DB.Prepare(`
+		DELETE FROM TICKETS WHERE ID = ?
 	`)
 
 	defer stmt.Close()
@@ -70,7 +90,17 @@ func DeleteReservationByID(id int) {
 
 func DeleteReservationByFoodID(id int) {
 	stmt, _ := DB.Prepare(`
-		DELETE FROM RESERVATIONS WHERE RESERVED_FOOD_ID = ?
+		DELETE FROM RESERVATIONS WHERE FOOD_ID = ?
+	`)
+
+	defer stmt.Close()
+
+	stmt.Exec(id)
+}
+
+func DeleteReservationByTicketID(id int) {
+	stmt, _ := DB.Prepare(`
+		DELETE FROM RESERVATIONS WHERE TICKET_ID = ?
 	`)
 
 	defer stmt.Close()
@@ -108,6 +138,16 @@ func DeleteAllReservation() {
 	stmt.Exec()
 }
 
+func DeleteAllTicket() {
+	stmt, _ := DB.Prepare(`
+		DELETE FROM TICKETS
+	`)
+
+	defer stmt.Close()
+
+	stmt.Exec()
+}
+
 func GetFoodList() []model.Food {
 	foods := []model.Food{}
 
@@ -124,16 +164,34 @@ func GetFoodList() []model.Food {
 	return foods
 }
 
-func GetReservationList() []model.Reservation {
-	reservations := []model.Reservation{}
+func GetTicketList() []model.Ticket {
+	tickets := []model.Ticket{}
 
 	rows, _ := DB.Query(`
-		SELECT * FROM RESERVATIONS
+		SELECT * FROM TICKETS
 	`)
 
 	for rows.Next() {
+		var ticket model.Ticket
+		rows.Scan(&ticket.ID, &ticket.Username)
+		tickets = append(tickets, ticket)
+	}
+
+	return tickets
+}
+
+func GetReservationListByTicketID(id int) []model.Reservation {
+	reservations := []model.Reservation{}
+
+	stmt, _ := DB.Prepare(`
+		SELECT * FROM RESERVATIONS WHERE TICKET_ID = ?
+	`)
+
+	rows, _ := stmt.Query(id)
+
+	for rows.Next() {
 		var reservation model.Reservation
-		rows.Scan(&reservation.ID, &reservation.Username, &reservation.ReservedFoodID)
+		rows.Scan(&reservation.ID, &reservation.TicketID, &reservation.FoodID)
 		reservations = append(reservations, reservation)
 	}
 
@@ -156,23 +214,23 @@ func GetFoodByID(id int) model.Food {
 	return food
 }
 
-func GetReservationByID(id int) model.Reservation {
-	var reservation model.Reservation
+func GetTicketByID(id int) model.Ticket {
+	var ticket model.Ticket
 
 	stmt, _ := DB.Prepare(`
-	SELECT * FROM RESERVATIONS WHERE ID = ?
+	SELECT * FROM TICKETS WHERE ID = ?
 	`)
 
 	defer stmt.Close()
 
 	row := stmt.QueryRow(id)
 
-	row.Scan(&reservation.ID, &reservation.Username, &reservation.ReservedFoodID)
+	row.Scan(&ticket.ID, &ticket.Username)
 
-	return reservation
+	return ticket
 }
 
-func UpdateFoodByID(food model.Food) {
+func UpdateFoodByID(id int, food model.FoodUpdatePayload) {
 
 	stmt, _ := DB.Prepare(`
 	UPDATE FOODS SET NAME = ? WHERE ID = ?
@@ -180,18 +238,18 @@ func UpdateFoodByID(food model.Food) {
 
 	defer stmt.Close()
 
-	stmt.Exec(food.Name, food.ID)
+	stmt.Exec(food.Name, id)
 
 }
 
-func UpdateReservationByID(reservation model.Reservation) {
+func UpdateTicketByID(id int, ticket model.TicketPayload) {
 
 	stmt, _ := DB.Prepare(`
-	UPDATE RESERVATIONS SET USERNAME = ?, RESERVATION_FOOD_ID = ? WHERE ID = ?
+	UPDATE TICKETS SET USERNAME = ? WHERE ID = ?
 	`)
 
 	defer stmt.Close()
 
-	stmt.Exec(reservation.Username, reservation.ReservedFoodID, reservation.ID)
+	stmt.Exec(ticket.Username, id)
 
 }
