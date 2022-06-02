@@ -12,16 +12,10 @@ type FoodPayload struct {
 type Reservation struct {
 	ID             int    `json:"id"`
 	Username       string `json:"username"`
-	ReservedFoodID int    `json:"reserved_food_id"`
+	ReservedFoodID []int  `json:"reserved_food_id"`
 }
 
 type ReservationPayload struct {
 	Username       string `json:"username"`
-	ReservedFoodID int    `json:"reserved_food_id"`
-}
-
-type ReservationResponse struct {
-	ID           int    `json:"id"`
-	Username     string `json:"username"`
-	ReservedFood Food   `json:"reserved_food"`
+	ReservedFoodID []int  `json:"reserved_food_id"`
 }

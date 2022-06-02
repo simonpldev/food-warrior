@@ -128,7 +128,7 @@ func GetReservationList() []model.Reservation {
 	reservations := []model.Reservation{}
 
 	rows, _ := DB.Query(`
-		SELECT * FROM FOODS
+		SELECT * FROM RESERVATIONS
 	`)
 
 	for rows.Next() {
@@ -154,4 +154,44 @@ func GetFoodByID(id int) model.Food {
 	row.Scan(&food.ID, &food.Name)
 
 	return food
+}
+
+func GetReservationByID(id int) model.Reservation {
+	var reservation model.Reservation
+
+	stmt, _ := DB.Prepare(`
+	SELECT * FROM RESERVATIONS WHERE ID = ?
+	`)
+
+	defer stmt.Close()
+
+	row := stmt.QueryRow(id)
+
+	row.Scan(&reservation.ID, &reservation.Username, &reservation.ReservedFoodID)
+
+	return reservation
+}
+
+func UpdateFoodByID(food model.Food) {
+
+	stmt, _ := DB.Prepare(`
+	UPDATE FOODS SET NAME = ? WHERE ID = ?
+	`)
+
+	defer stmt.Close()
+
+	stmt.Exec(food.Name, food.ID)
+
+}
+
+func UpdateReservationByID(reservation model.Reservation) {
+
+	stmt, _ := DB.Prepare(`
+	UPDATE RESERVATIONS SET USERNAME = ?, RESERVATION_FOOD_ID = ? WHERE ID = ?
+	`)
+
+	defer stmt.Close()
+
+	stmt.Exec(reservation.Username, reservation.ReservedFoodID, reservation.ID)
+
 }

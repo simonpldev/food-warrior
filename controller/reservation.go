@@ -11,27 +11,12 @@ import (
 
 func ReservationList(c echo.Context) error {
 
-	rl := db.GetReservationList()
-
-	rs := convertToResponse(rl)
+	rs := db.GetReservationList()
 
 	//Return 200
 	return util.Response200(c, "", rs)
 }
 
-func convertToResponse(reservationList []model.Reservation) []model.ReservationResponse {
-	var res []model.ReservationResponse
-	for _, r := range reservationList {
-		food := db.GetFoodByID(r.ReservedFoodID)
-		rr := model.ReservationResponse{
-			ID:           r.ID,
-			Username:     r.Username,
-			ReservedFood: food,
-		}
-		res = append(res, rr)
-	}
-	return res
-}
 
 func ReservationCreate(c echo.Context) error {
 	var (
